@@ -1,0 +1,126 @@
+{
+  "name": "just-todo-it",
+  "displayName": "Just TODO It",
+  "description": "Display all TODOs found in your workspace, grouped by label",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "vscode:prepublish": "yarn compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package --no-dependencies",
+    "build": "yarn compile && yarn package"
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "just-todo-it",
+          "title": "Just TODO It",
+          "icon": "$(checklist)"
+        }
+      ]
+    },
+    "views": {
+      "just-todo-it": [
+        {
+          "id": "todoSearchView",
+          "name": "Search",
+          "type": "webview"
+        },
+        {
+          "id": "todoTreeView",
+          "name": "TODOs",
+          "contextualTitle": "TODOs"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "just-todo-it.refresh",
+        "title": "Refresh TODOs",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "just-todo-it.toggleFlat",
+        "title": "Toggle Flat/Grouped",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "just-todo-it.search",
+        "title": "Search TODOs",
+        "icon": "$(search)"
+      },
+      {
+        "command": "just-todo-it.clearSearch",
+        "title": "Clear Search",
+        "icon": "$(close)"
+      },
+      {
+        "command": "just-todo-it.scopeToLabel",
+        "title": "Scope to This Label",
+        "icon": "$(screen-full)"
+      }
+    ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "just-todo-it.scopeToLabel",
+          "when": "view == todoTreeView && viewItem == label",
+          "group": "inline"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "just-todo-it.refresh",
+          "when": "view == todoTreeView",
+          "group": "navigation"
+        },
+        {
+          "command": "just-todo-it.toggleFlat",
+          "when": "view == todoTreeView",
+          "group": "navigation"
+        },
+        {
+          "command": "just-todo-it.search",
+          "when": "view == todoTreeView",
+          "group": "navigation"
+        },
+        {
+          "command": "just-todo-it.clearSearch",
+          "when": "view == todoTreeView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "colors": [
+      {
+        "id": "justTodoIt.todoColor",
+        "description": "Color for TODO items",
+        "defaults": {
+          "dark": "#15803d",
+          "light": "#15803d",
+          "highContrast": "#15803d"
+        }
+      }
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "@types/vscode": "^1.105.0",
+    "@vscode/vsce": "^3.7.1",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "yarn@4.9.2"
+}

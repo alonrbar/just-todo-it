@@ -1,0 +1,15 @@
+.yarn/**
+.vscode/**
+.vscode-test/**
+src/**
+.gitignore
+.gitattributes
+.editorconfig
+.yarnrc.yml
+yarn.lock
+tsconfig.json
+**/*.ts
+**/*.map
+**/.DS_Store
+node_modules/**
+*.vsix
