@@ -4,6 +4,10 @@
   "description": "Display all TODOs found in your workspace, grouped by label",
   "version": "0.0.1",
   "publisher": "local",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alonrbar/just-todo-it"
+  },
   "engines": {
     "vscode": "^1.105.0"
   },

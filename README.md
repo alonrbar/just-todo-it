@@ -1,6 +1,6 @@
 # just-todo-it
 
-TODO management extension for Visual Studio Code.
+TODO viewer extension for Visual Studio Code.
 
 ## Features
 
