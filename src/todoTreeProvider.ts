@@ -31,11 +31,24 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeItem> {
     private filterPattern: string = '';
 
     /**
-     * Updates the TODO list and refreshes the tree
+     * Sets the TODO list and refreshes the tree
      * @param todos - New list of TODO items
      */
     setTodos(todos: TodoItem[]): void {
         this.todos = todos;
+        this.refresh();
+    }
+
+    /**
+     * Sets TODOs for a specific file, replacing any existing TODOs from that file
+     * @param filePath - The absolute file path
+     * @param fileTodos - New list of TODO items for this file
+     */
+    setTodosForFile(filePath: string, fileTodos: TodoItem[]): void {
+        // Remove existing TODOs from this file
+        this.todos = this.todos.filter(todo => todo.filePath !== filePath);
+        // Add the new TODOs
+        this.todos.push(...fileTodos);
         this.refresh();
     }
 

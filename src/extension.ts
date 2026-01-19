@@ -34,12 +34,11 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Initial scan
-    scanAndUpdate(scanner, treeProvider);
+    scanWorkspace(scanner, treeProvider);
 
     // Register commands
     const refreshCommand = vscode.commands.registerCommand('just-todo-it.refresh', async () => {
-        await scanAndUpdate(scanner, treeProvider);
-        vscode.window.showInformationMessage('TODOs refreshed');
+        await scanWorkspace(scanner, treeProvider);
     });
 
     const toggleFlatCommand = vscode.commands.registerCommand('just-todo-it.toggleFlat', () => {
@@ -89,18 +88,28 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Set up file watcher to auto-refresh on file save
-    const fileWatcher = vscode.workspace.onDidSaveTextDocument(async (document) => {
-        // Re-scan when a file is saved
-        await scanAndUpdate(scanner, treeProvider);
+    const fileWatcher = vscode.workspace.onDidSaveTextDocument((document) => {
+        scanDocument(scanner, treeProvider, document);
     });
 
     // Watch for file creation and deletion
-    const createWatcher = vscode.workspace.onDidCreateFiles(async () => {
-        await scanAndUpdate(scanner, treeProvider);
+    const createWatcher = vscode.workspace.onDidCreateFiles(async (event: vscode.FileCreateEvent) => {
+        for (const file of event.files) {
+            try {
+                const document = await vscode.workspace.openTextDocument(file);
+                scanDocument(scanner, treeProvider, document);
+            } catch (error) {
+                console.warn(`Could not scan created file ${file.fsPath}:`, error);
+            }
+        }
     });
 
-    const deleteWatcher = vscode.workspace.onDidDeleteFiles(async () => {
-        await scanAndUpdate(scanner, treeProvider);
+    const deleteWatcher = vscode.workspace.onDidDeleteFiles((event: vscode.FileDeleteEvent) => {
+        for (const file of event.files) {
+            // File is deleted, so just remove its TODOs (pass empty array)
+            treeProvider.setTodosForFile(file.fsPath, []);
+        }
+        updateTreeViewTitle(treeProvider);
     });
 
     // Register all disposables
@@ -119,9 +128,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 /**
- * Scans the workspace and updates the tree provider
+ * Scans the entire workspace and updates the tree provider
  */
-async function scanAndUpdate(scanner: TodoScanner, treeProvider: TodoTreeProvider): Promise<void> {
+async function scanWorkspace(scanner: TodoScanner, treeProvider: TodoTreeProvider): Promise<void> {
     try {
         const todos = await scanner.scanWorkspace();
         treeProvider.setTodos(todos);
@@ -129,6 +138,19 @@ async function scanAndUpdate(scanner: TodoScanner, treeProvider: TodoTreeProvide
     } catch (error) {
         console.error('Error scanning workspace:', error);
         vscode.window.showErrorMessage('Failed to scan workspace for TODOs');
+    }
+}
+
+/**
+ * Scans a single document and updates the tree provider
+ */
+function scanDocument(scanner: TodoScanner, treeProvider: TodoTreeProvider, document: vscode.TextDocument): void {
+    try {
+        const todos = scanner.scanDocument(document);
+        treeProvider.setTodosForFile(document.uri.fsPath, todos);
+        updateTreeViewTitle(treeProvider);
+    } catch (error) {
+        console.error('Error scanning document:', error);
     }
 }
 

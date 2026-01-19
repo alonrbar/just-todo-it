@@ -48,42 +48,52 @@ export class TodoScanner {
      * @returns Array of TodoItem objects found in the file
      */
     async scanFile(uri: vscode.Uri): Promise<TodoItem[]> {
-        const todos: TodoItem[] = [];
-        
         try {
             const document = await vscode.workspace.openTextDocument(uri);
-            const text = document.getText();
-            const lines = text.split('\n');
-            
-            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-            const relativePath = workspaceFolder 
-                ? vscode.workspace.asRelativePath(uri, false)
-                : uri.fsPath;
-
-            for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-                const line = lines[lineIndex];
-                
-                // Reset regex lastIndex for each line
-                TODO_PATTERN.lastIndex = 0;
-                
-                let match: RegExpExecArray | null;
-                while ((match = TODO_PATTERN.exec(line)) !== null) {
-                    const label = match[1].trim();
-                    const todoText = match[2].trim();
-                    
-                    todos.push({
-                        label,
-                        text: todoText,
-                        filePath: uri.fsPath,
-                        relativePath,
-                        line: lineIndex,
-                        column: match.index
-                    });
-                }
-            }
+            return this.scanDocument(document);
         } catch (error) {
             // Silently skip files that can't be read (binary files, permission issues, etc.)
             console.warn(`Could not scan file ${uri.fsPath}:`, error);
+            return [];
+        }
+    }
+
+    /**
+     * Scans an already-open document for TODO comments
+     * @param document - The TextDocument to scan
+     * @returns Array of TodoItem objects found in the document
+     */
+    scanDocument(document: vscode.TextDocument): TodoItem[] {
+        const todos: TodoItem[] = [];
+        const uri = document.uri;
+        const text = document.getText();
+        const lines = text.split('\n');
+        
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+        const relativePath = workspaceFolder 
+            ? vscode.workspace.asRelativePath(uri, false)
+            : uri.fsPath;
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const line = lines[lineIndex];
+            
+            // Reset regex lastIndex for each line
+            TODO_PATTERN.lastIndex = 0;
+            
+            let match: RegExpExecArray | null;
+            while ((match = TODO_PATTERN.exec(line)) !== null) {
+                const label = match[1].trim();
+                const todoText = match[2].trim();
+                
+                todos.push({
+                    label,
+                    text: todoText,
+                    filePath: uri.fsPath,
+                    relativePath,
+                    line: lineIndex,
+                    column: match.index
+                });
+            }
         }
         
         return todos;
