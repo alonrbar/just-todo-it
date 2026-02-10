@@ -4,5 +4,6 @@
     "no-duplicate-heading": false,
     "no-bare-urls": false,
     "descriptive-link-text": false,
-    "fenced-code-language": false
+    "fenced-code-language": false,
+    "no-inline-html": false
 }

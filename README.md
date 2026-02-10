@@ -2,6 +2,8 @@
 
 TODO viewer extension for Visual Studio Code.
 
+<img src="./docs/assets/screenshot.png?raw=true" alt="TODOs view" width="300" />
+
 ## TODO Format
 
 The extension recognizes TODOs in the following format:
