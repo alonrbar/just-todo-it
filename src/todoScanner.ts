@@ -3,9 +3,10 @@ import { TodoItem } from './types';
 
 /**
  * Regex pattern to match TODO(label): text
- * Captures: [1] = label, [2] = text
+ * Captures: [1] = optional label, [2] = text
  */
-const TODO_PATTERN = /TODO\(([^)]+)\):\s*(.*)/g;
+const TODO_PATTERN = /TODO(?:\(([^)]+)\))?:\s*(.*)/g;
+const UNLABELED_TODO_LABEL = 'unlabeled';
 
 /**
  * Glob pattern for files to exclude from scanning
@@ -82,7 +83,11 @@ export class TodoScanner {
             
             let match: RegExpExecArray | null;
             while ((match = TODO_PATTERN.exec(line)) !== null) {
-                const label = match[1].trim();
+                if (this.isInsideQuotedString(line, match.index)) {
+                    continue;
+                }
+
+                const label = match[1]?.trim() || UNLABELED_TODO_LABEL;
                 const todoText = match[2].trim();
                 
                 todos.push({
@@ -97,6 +102,38 @@ export class TodoScanner {
         }
         
         return todos;
+    }
+
+    /**
+     * Checks whether a character position in a line is inside a quoted string.
+     */
+    private isInsideQuotedString(line: string, index: number): boolean {
+        let activeQuote: "'" | '"' | '`' | null = null;
+        let escaped = false;
+
+        for (let i = 0; i < index; i++) {
+            const char = line[i];
+
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+
+            if (char === '\\') {
+                escaped = true;
+                continue;
+            }
+
+            if (activeQuote === null) {
+                if (char === "'" || char === '"' || char === '`') {
+                    activeQuote = char;
+                }
+            } else if (char === activeQuote) {
+                activeQuote = null;
+            }
+        }
+
+        return activeQuote !== null;
     }
 
     /**
