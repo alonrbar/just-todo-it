@@ -2,28 +2,19 @@
 
 TODO viewer extension for Visual Studio Code.
 
-## Features
-
-- **Side Panel View** - Dedicated panel in the activity bar with a checklist icon
-- **Grouped by Label** - TODOs are organized by their label (from `TODO(label): text` format)
-- **Grouped by File** - Within each label, TODOs are further grouped by file
-- **Flat View Toggle** - Switch between grouped and flat list views
-- **Fuzzy Search** - Filter TODOs by file path, label, or text using fuzzy matching
-- **Click to Navigate** - Click any TODO to jump directly to that line in the file
-- **Auto-Refresh** - Automatically updates when files are saved, created, or deleted
-- **Manual Refresh** - Refresh button to re-scan the workspace on demand
-- **Sorted Alphabetically** - Labels, files, and TODOs are always sorted by name
-
 ## TODO Format
 
-This extension only recognizes TODOs in the following format:
+The extension recognizes TODOs in the following format:
 
 ```
+TODO: description text
 TODO(label): description text
 ```
 
 Examples:
+
 ```
+// TODO: Refactor this function
 // TODO(auth): Add password validation
 // TODO(refactor): Extract this into a separate function
 // TODO(bug-123): Fix null pointer exception
@@ -46,18 +37,24 @@ Examples:
 # Install dependencies
 yarn install
 
-# Compile TypeScript
-yarn compile
-
-# Package the extension
-yarn package
+# Build the extension
+yarn build
 ```
 
-## Usage
+## Debugging
 
-1. Click the checklist icon in the activity bar to open the TODO panel
-2. Use the toolbar buttons:
-   - **Refresh** - Re-scan workspace for TODOs
-   - **Toggle View** - Switch between grouped and flat views
-   - **Search** - Filter TODOs with fuzzy matching
-   - **Clear Search** - Remove the current filter
+1. Install dependencies:
+
+   ```bash
+   yarn install
+   ```
+
+2. Press `F5` to launch an **Extension Development Host** window.
+
+3. In the dev host, open any workspace and use the **Just TODO It** view to test changes.
+
+4. For faster iteration, run TypeScript in watch mode in a terminal:
+
+   ```bash
+   yarn watch
+   ```
