@@ -11,13 +11,14 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('Just TODO It extension is now active');
 
     const scanner = new TodoScanner();
-    const treeProvider = new TodoTreeProvider();
+    const treeProvider = new TodoTreeProvider(context);
 
     // Create the search view provider
     searchViewProvider = new SearchViewProvider(context.extensionUri, (query) => {
         treeProvider.setFilter(query);
         updateTreeViewTitle(treeProvider);
     });
+    searchViewProvider.setQuery(treeProvider.getFilter());
 
     // Register the search webview provider
     context.subscriptions.push(

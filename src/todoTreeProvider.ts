@@ -16,6 +16,8 @@ const VIEW_MODE_LABELS: Record<ViewMode, string> = {
     byTag: 'Grouped by Tag',
     flat: 'Flat'
 };
+const VIEW_MODE_STATE_KEY = 'todoTreeProvider.viewMode';
+const FILTER_STATE_KEY = 'todoTreeProvider.filterPattern';
 
 /**
  * Provides data for the TODO tree view
@@ -29,6 +31,15 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeItem> {
     private todos: TodoItem[] = [];
     private viewMode: ViewMode = 'grouped';
     private filterPattern: string = '';
+
+    constructor(private readonly extensionContext: vscode.ExtensionContext) {
+        const savedViewMode = extensionContext.workspaceState.get<ViewMode>(VIEW_MODE_STATE_KEY);
+        if (savedViewMode && savedViewMode in VIEW_MODE_LABELS) {
+            this.viewMode = savedViewMode;
+        }
+
+        this.filterPattern = extensionContext.workspaceState.get<string>(FILTER_STATE_KEY, '');
+    }
 
     /**
      * Sets the TODO list and refreshes the tree
@@ -67,6 +78,7 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeItem> {
         const modes: ViewMode[] = ['grouped', 'byTag', 'flat'];
         const currentIndex = modes.indexOf(this.viewMode);
         this.viewMode = modes[(currentIndex + 1) % modes.length];
+        void this.extensionContext.workspaceState.update(VIEW_MODE_STATE_KEY, this.viewMode);
         this.refresh();
         return VIEW_MODE_LABELS[this.viewMode];
     }
@@ -91,6 +103,7 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeItem> {
      */
     setFilter(pattern: string): void {
         this.filterPattern = pattern;
+        void this.extensionContext.workspaceState.update(FILTER_STATE_KEY, this.filterPattern);
         this.refresh();
     }
 
