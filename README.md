@@ -2,7 +2,7 @@
 
 TODO viewer extension for Visual Studio Code.
 
-<img src="./docs/assets/screenshot.png?raw=true" alt="TODOs view" width="300" />
+<img src="https://raw.githubusercontent.com/alonrbar/just-todo-it/refs/heads/master/docs/assets/screenshot.png" alt="TODOs view" width="300" />
 
 ## TODO Format
 
