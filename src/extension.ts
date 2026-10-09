@@ -96,13 +96,10 @@ export function activate(context: vscode.ExtensionContext) {
     // Watch for file creation and deletion
     const createWatcher = vscode.workspace.onDidCreateFiles(async (event: vscode.FileCreateEvent) => {
         for (const file of event.files) {
-            try {
-                const document = await vscode.workspace.openTextDocument(file);
-                scanDocument(scanner, treeProvider, document);
-            } catch (error) {
-                console.warn(`Could not scan created file ${file.fsPath}:`, error);
-            }
+            const todos = await scanner.scanFile(file);
+            treeProvider.setTodosForFile(file.fsPath, todos);
         }
+        updateTreeViewTitle(treeProvider);
     });
 
     const deleteWatcher = vscode.workspace.onDidDeleteFiles((event: vscode.FileDeleteEvent) => {

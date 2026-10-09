@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { TodoItem } from './types';
+import { mapWithConcurrency } from './utils';
 
 /**
  * Regex pattern to match TODO(label): text
@@ -14,6 +15,13 @@ const UNLABELED_TODO_LABEL = 'unlabeled';
 const EXCLUDE_PATTERN = '{**/node_modules/**,**/.git/**,**/out/**,**/dist/**,**/.next/**,**/build/**,**/*.min.js,**/*.min.css}';
 
 /**
+ * Maximum number of files read concurrently during a workspace scan
+ */
+const SCAN_CONCURRENCY = 16;
+
+const textDecoder = new TextDecoder('utf-8');
+
+/**
  * Scans the workspace for TODO comments matching the pattern TODO(label): text
  */
 export class TodoScanner {
@@ -21,37 +29,30 @@ export class TodoScanner {
      * Scans all files in the workspace for TODO comments
      * @returns Array of TodoItem objects
      */
-    async scanWorkspace(): Promise<TodoItem[]> {
-        const todos: TodoItem[] = [];
-        
+    public async scanWorkspace(): Promise<TodoItem[]> {
         // Find all text files, excluding common non-source directories
         const files = await vscode.workspace.findFiles('**/*', EXCLUDE_PATTERN);
         
         // Filter to only text-like files
         const textFiles = files.filter(file => this.isTextFile(file.fsPath));
         
-        // Scan each file in parallel
-        const results = await Promise.all(
-            textFiles.map(file => this.scanFile(file))
-        );
-        
-        // Flatten results
-        for (const fileTodos of results) {
-            todos.push(...fileTodos);
-        }
-        
-        return todos;
+        // Scan files with a bounded number of concurrent reads
+        const results = await mapWithConcurrency(textFiles, SCAN_CONCURRENCY, file => this.scanFile(file));
+
+        return results.flat();
     }
 
     /**
-     * Scans a single file for TODO comments
+     * Scans a single file on disk for TODO comments
      * @param uri - The file URI to scan
      * @returns Array of TodoItem objects found in the file
      */
-    async scanFile(uri: vscode.Uri): Promise<TodoItem[]> {
+    public async scanFile(uri: vscode.Uri): Promise<TodoItem[]> {
         try {
-            const document = await vscode.workspace.openTextDocument(uri);
-            return this.scanDocument(document);
+            // Read raw bytes instead of opening a TextDocument, which is much more
+            // expensive and notifies other extensions about every opened file
+            const bytes = await vscode.workspace.fs.readFile(uri);
+            return this.scanDocumentBody(uri, textDecoder.decode(bytes));
         } catch (error) {
             // Silently skip files that can't be read (binary files, permission issues, etc.)
             console.warn(`Could not scan file ${uri.fsPath}:`, error);
@@ -64,16 +65,22 @@ export class TodoScanner {
      * @param document - The TextDocument to scan
      * @returns Array of TodoItem objects found in the document
      */
-    scanDocument(document: vscode.TextDocument): TodoItem[] {
+    public scanDocument(document: vscode.TextDocument): TodoItem[] {
+        return this.scanDocumentBody(document.uri, document.getText());
+    }
+
+    //
+    // Private methods
+    //
+
+    private scanDocumentBody(fileUri: vscode.Uri, textContent: string): TodoItem[] {
         const todos: TodoItem[] = [];
-        const uri = document.uri;
-        const text = document.getText();
-        const lines = text.split('\n');
+        const lines = textContent.split('\n');
         
-        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(fileUri);
         const relativePath = workspaceFolder 
-            ? vscode.workspace.asRelativePath(uri, false)
-            : uri.fsPath;
+            ? vscode.workspace.asRelativePath(fileUri, false)
+            : fileUri.fsPath;
 
         for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
             const line = lines[lineIndex];
@@ -93,7 +100,7 @@ export class TodoScanner {
                 todos.push({
                     label,
                     text: todoText,
-                    filePath: uri.fsPath,
+                    filePath: fileUri.fsPath,
                     relativePath,
                     line: lineIndex,
                     column: match.index
