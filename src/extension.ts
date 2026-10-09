@@ -3,6 +3,7 @@ import { TodoScanner } from './scan/todoScanner';
 import { TodoTreeProvider } from './view/todoTreeProvider';
 import { SearchViewProvider } from './view/searchViewProvider';
 import { TodoItem } from './types';
+import { TodoWatcher } from './todoWatcher';
 
 let treeView: vscode.TreeView<any>;
 let searchViewProvider: SearchViewProvider;
@@ -88,27 +89,8 @@ export function activate(context: vscode.ExtensionContext) {
         editor.revealRange(selection, vscode.TextEditorRevealType.InCenter);
     });
 
-    // Set up file watcher to auto-refresh on file save
-    const fileWatcher = vscode.workspace.onDidSaveTextDocument((document) => {
-        scanDocument(scanner, treeProvider, document);
-    });
-
-    // Watch for file creation and deletion
-    const createWatcher = vscode.workspace.onDidCreateFiles(async (event: vscode.FileCreateEvent) => {
-        for (const file of event.files) {
-            const todos = await scanner.scanFile(file);
-            treeProvider.setTodosForFile(file.fsPath, todos);
-        }
-        updateTreeViewTitle(treeProvider);
-    });
-
-    const deleteWatcher = vscode.workspace.onDidDeleteFiles((event: vscode.FileDeleteEvent) => {
-        for (const file of event.files) {
-            // File is deleted, so just remove its TODOs (pass empty array)
-            treeProvider.setTodosForFile(file.fsPath, []);
-        }
-        updateTreeViewTitle(treeProvider);
-    });
+    // Update TODOs when files are created, changed (including saves) or deleted
+    const todoWatcher = new TodoWatcher(scanner, treeProvider, () => updateTreeViewTitle(treeProvider));
 
     // Register all disposables
     context.subscriptions.push(
@@ -119,9 +101,7 @@ export function activate(context: vscode.ExtensionContext) {
         clearSearchCommand,
         scopeToLabelCommand,
         openTodoCommand,
-        fileWatcher,
-        createWatcher,
-        deleteWatcher
+        todoWatcher
     );
 }
 
@@ -136,19 +116,6 @@ async function scanWorkspace(scanner: TodoScanner, treeProvider: TodoTreeProvide
     } catch (error) {
         console.error('Error scanning workspace:', error);
         vscode.window.showErrorMessage('Failed to scan workspace for TODOs');
-    }
-}
-
-/**
- * Scans a single document and updates the tree provider
- */
-function scanDocument(scanner: TodoScanner, treeProvider: TodoTreeProvider, document: vscode.TextDocument): void {
-    try {
-        const todos = scanner.scanDocument(document);
-        treeProvider.setTodosForFile(document.uri.fsPath, todos);
-        updateTreeViewTitle(treeProvider);
-    } catch (error) {
-        console.error('Error scanning document:', error);
     }
 }
 

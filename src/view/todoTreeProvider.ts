@@ -1,3 +1,4 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { TodoItem } from '../types';
 import { fuzzyMatch, createSearchableString } from '../utils/fuzzyMatch';
@@ -51,15 +52,21 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeItem> {
     }
 
     /**
-     * Sets TODOs for a specific file, replacing any existing TODOs from that file
-     * @param filePath - The absolute file path
-     * @param fileTodos - New list of TODO items for this file
+     * Replaces the TODOs of changed files and removes the TODOs of deleted paths,
+     * then refreshes the tree once
+     * @param changedFiles - New list of TODO items per absolute file path
+     * @param deletedPaths - Absolute paths of deleted files or folders
      */
-    setTodosForFile(filePath: string, fileTodos: TodoItem[]): void {
-        // Remove existing TODOs from this file
-        this.todos = this.todos.filter(todo => todo.filePath !== filePath);
-        // Add the new TODOs
-        this.todos.push(...fileTodos);
+    updateFiles(changedFiles: Map<string, TodoItem[]>, deletedPaths: string[]): void {
+        function isDeleted(filePath: string): boolean {
+            return deletedPaths.some(deletedPath => filePath === deletedPath || filePath.startsWith(deletedPath + path.sep));
+        }
+
+        // Remove existing TODOs from changed and deleted files, then add the new TODOs
+        this.todos = this.todos.filter(todo => !changedFiles.has(todo.filePath) && !isDeleted(todo.filePath));
+        for (const fileTodos of changedFiles.values()) {
+            this.todos.push(...fileTodos);
+        }
         this.refresh();
     }
 
