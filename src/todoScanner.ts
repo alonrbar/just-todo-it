@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { TodoItem } from './types';
+import { EXCLUDE_PATTERN, INCLUDE_PATTERN, MAX_FILE_SIZE_BYTES } from './scanFilePatterns';
 import { mapWithConcurrency } from './utils';
 
 /**
@@ -10,19 +11,9 @@ const TODO_PATTERN = /TODO(?:\(([^)]+)\))?:\s*(.*)/g;
 const UNLABELED_TODO_LABEL = 'unlabeled';
 
 /**
- * Glob pattern for files to exclude from scanning
- */
-const EXCLUDE_PATTERN = '{**/node_modules/**,**/.git/**,**/out/**,**/dist/**,**/.next/**,**/build/**,**/*.min.js,**/*.min.css}';
-
-/**
  * Maximum number of files read concurrently during a workspace scan
  */
 const SCAN_CONCURRENCY = 16;
-
-/**
- * Files larger than this are skipped during a workspace scan (usually generated files)
- */
-const MAX_FILE_SIZE_BYTES = 1024 * 1024;
 
 const textDecoder = new TextDecoder('utf-8');
 
@@ -35,14 +26,12 @@ export class TodoScanner {
    * @returns Array of TodoItem objects
    */
   public async scanWorkspace(): Promise<TodoItem[]> {
-    // Find all text files, excluding common non-source directories
-    const files = await vscode.workspace.findFiles('**/*', EXCLUDE_PATTERN);
 
-    // Filter to only text-like files
-    const textFiles = files.filter(file => this.isTextFile(file.fsPath));
+    // Find all text files, excluding common non-source directories
+    const files = await vscode.workspace.findFiles(INCLUDE_PATTERN, EXCLUDE_PATTERN);
 
     // Scan files with a bounded number of concurrent reads
-    const results = await mapWithConcurrency(textFiles, SCAN_CONCURRENCY, file => this.scanFile(file));
+    const results = await mapWithConcurrency(files, SCAN_CONCURRENCY, file => this.scanFile(file));
 
     return results.flat();
   }
@@ -157,98 +146,5 @@ export class TodoScanner {
     }
 
     return activeQuote !== null;
-  }
-
-  /**
-   * Checks if a file is likely a text file based on its extension
-   * @param filePath - The file path to check
-   * @returns true if the file appears to be a text file
-   */
-  private isTextFile(filePath: string): boolean {
-    const textExtensions = [
-      // Programming languages
-      '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
-      '.py', '.pyw',
-      '.java', '.kt', '.kts', '.scala',
-      '.c', '.cpp', '.cc', '.cxx', '.h', '.hpp', '.hxx',
-      '.cs', '.fs', '.fsx',
-      '.go',
-      '.rs',
-      '.rb', '.erb',
-      '.php',
-      '.swift',
-      '.m', '.mm',
-      '.lua',
-      '.pl', '.pm',
-      '.r', '.R',
-      '.dart',
-      '.ex', '.exs',
-      '.clj', '.cljs', '.cljc',
-      '.hs', '.lhs',
-      '.elm',
-      '.vue', '.svelte',
-      // Web
-      '.html', '.htm', '.xhtml',
-      '.css', '.scss', '.sass', '.less', '.styl',
-      // Data/Config
-      '.json', '.jsonc', '.json5',
-      '.xml', '.xsl', '.xslt',
-      '.yaml', '.yml',
-      '.toml',
-      '.ini', '.cfg', '.conf',
-      '.env',
-      '.properties',
-      // Documentation
-      '.md', '.markdown', '.mdx',
-      '.txt', '.text',
-      '.rst',
-      '.adoc',
-      // Shell/Scripts
-      '.sh', '.bash', '.zsh', '.fish',
-      '.ps1', '.psm1', '.psd1',
-      '.bat', '.cmd',
-      // Other
-      '.sql',
-      '.graphql', '.gql',
-      '.proto',
-      '.tf', '.tfvars',
-      '.dockerfile',
-      '.makefile',
-      '.gradle',
-      '.cmake',
-    ];
-
-    const lowerPath = filePath.toLowerCase();
-
-    // Check extension
-    if (textExtensions.some(ext => lowerPath.endsWith(ext))) {
-      return true;
-    }
-
-    // Check for common extensionless text files
-    const fileName = lowerPath.split(/[/\\]/).pop() || '';
-    const extensionlessTextFiles = [
-      'dockerfile',
-      'makefile',
-      'gemfile',
-      'rakefile',
-      'procfile',
-      'vagrantfile',
-      'jenkinsfile',
-      'brewfile',
-      '.gitignore',
-      '.gitattributes',
-      '.editorconfig',
-      '.prettierrc',
-      '.eslintrc',
-      '.babelrc',
-      'license',
-      'readme',
-      'changelog',
-      'contributing',
-      'authors',
-    ];
-
-    return extensionlessTextFiles.some(name => fileName === name || fileName.startsWith(name + '.'));
   }
 }
