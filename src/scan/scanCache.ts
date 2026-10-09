@@ -36,6 +36,14 @@ export class ScanCache implements vscode.Disposable {
 
     private readonly files = new Map<string, CachedFile>();
     private saveTimer: ReturnType<typeof setTimeout> | undefined;
+    private savedSizeBytes = 0;
+
+    private readonly onDidSaveEmitter = new vscode.EventEmitter<void>();
+
+    /**
+     * Fired after the cache is saved, when its saved size may have changed
+     */
+    public readonly onDidSave = this.onDidSaveEmitter.event;
 
     /**
      * @param state - Workspace state to load the cache from and save it to
@@ -46,6 +54,7 @@ export class ScanCache implements vscode.Disposable {
             for (const [filePath, cachedFile] of Object.entries(savedCache.files)) {
                 this.files.set(filePath, cachedFile);
             }
+            this.savedSizeBytes = JSON.stringify(savedCache).length;
         }
     }
 
@@ -53,6 +62,14 @@ export class ScanCache implements vscode.Disposable {
         if (this.saveTimer) {
             this.save();
         }
+        this.onDidSaveEmitter.dispose();
+    }
+
+    /**
+     * Gets the approximate size of the saved cache, in bytes
+     */
+    public getSavedSizeBytes(): number {
+        return this.savedSizeBytes;
     }
 
     /**
@@ -137,6 +154,8 @@ export class ScanCache implements vscode.Disposable {
             version: CACHE_VERSION,
             files: Object.fromEntries(this.files)
         };
+        this.savedSizeBytes = JSON.stringify(savedCache).length;
         void this.state.update(CACHE_STATE_KEY, savedCache);
+        this.onDidSaveEmitter.fire();
     }
 }

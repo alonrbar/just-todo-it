@@ -43,6 +43,20 @@ export class TodoScanner implements vscode.Disposable {
     }
 
     /**
+     * Fired after the scan cache is saved, when its size may have changed
+     */
+    public get onDidSaveCache(): vscode.Event<void> {
+        return this.cache.onDidSave;
+    }
+
+    /**
+     * Gets the approximate size of the saved scan cache, in bytes
+     */
+    public getCacheSizeBytes(): number {
+        return this.cache.getSavedSizeBytes();
+    }
+
+    /**
      * Gets the TODOs from the scan cache, to show before the first workspace scan completes
      */
     public getCachedTodos(): TodoItem[] {

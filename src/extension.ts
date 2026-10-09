@@ -4,14 +4,16 @@ import { TodoTreeProvider } from './view/todoTreeProvider';
 import { SearchViewProvider } from './view/searchViewProvider';
 import { TodoItem } from './types';
 import { TodoWatcher } from './todoWatcher';
+import { formatBytes } from './utils/format';
 
 let treeView: vscode.TreeView<any>;
 let searchViewProvider: SearchViewProvider;
+let scanner: TodoScanner;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Just TODO It extension is now active');
 
-    const scanner = new TodoScanner(context.workspaceState);
+    scanner = new TodoScanner(context.workspaceState);
     const treeProvider = new TodoTreeProvider(context);
 
     // Create the search view provider
@@ -104,7 +106,8 @@ export function activate(context: vscode.ExtensionContext) {
         scopeToLabelCommand,
         openTodoCommand,
         todoWatcher,
-        scanner
+        scanner,
+        scanner.onDidSaveCache(() => updateTreeViewTitle(treeProvider))
     );
 }
 
@@ -128,11 +131,12 @@ async function scanWorkspace(scanner: TodoScanner, treeProvider: TodoTreeProvide
 function updateTreeViewTitle(treeProvider: TodoTreeProvider): void {
     const filter = treeProvider.getFilter();
     const todos = treeProvider.getTodos();
-    
+    const cacheSize = `cache ${formatBytes(scanner.getCacheSizeBytes())}`;
+
     if (filter) {
-        treeView.description = `Filtering: "${filter}"`;
+        treeView.description = `Filtering: "${filter}" · ${cacheSize}`;
     } else {
-        treeView.description = `${todos.length} TODO${todos.length === 1 ? '' : 's'}`;
+        treeView.description = `${todos.length} TODO${todos.length === 1 ? '' : 's'} · ${cacheSize}`;
     }
 }
 
