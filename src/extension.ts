@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { TodoScanner } from './todoScanner';
-import { TodoTreeProvider } from './todoTreeProvider';
-import { SearchViewProvider } from './searchViewProvider';
+import { TodoScanner } from './scan/todoScanner';
+import { TodoTreeProvider } from './view/todoTreeProvider';
+import { SearchViewProvider } from './view/searchViewProvider';
 import { TodoItem } from './types';
 
 let treeView: vscode.TreeView<any>;

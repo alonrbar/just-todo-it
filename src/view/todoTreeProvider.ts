@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { TodoItem } from './types';
-import { fuzzyMatch, createSearchableString } from './utils';
+import { TodoItem } from '../types';
+import { fuzzyMatch, createSearchableString } from '../utils/fuzzyMatch';
 import { TodoTreeItem } from './todoTreeItem';
 
 /**

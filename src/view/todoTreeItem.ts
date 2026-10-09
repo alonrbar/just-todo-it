@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TodoItem } from './types';
+import { TodoItem } from '../types';
 
 /**
  * Tree item representing a node in the TODO tree view

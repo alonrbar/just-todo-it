@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { TodoItem } from './types';
+import { TodoItem } from '../types';
 import { getExcludePattern, INCLUDE_PATTERN, MAX_FILE_SIZE_BYTES } from './scanFilePatterns';
-import { mapWithConcurrency } from './utils';
+import { mapWithConcurrency } from '../utils/async';
 
 /**
  * Regex pattern to match TODO(label): text
