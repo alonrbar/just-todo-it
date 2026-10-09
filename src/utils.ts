@@ -62,10 +62,3 @@ export async function mapWithConcurrency<T, R>(items: readonly T[], concurrency:
 
   return results;
 }
-
-/**
- * Makes a glob segment match regardless of letter case (e.g. "ts" -> "[tT][sS]")
- */
-export function caseInsensitiveGlob(text: string): string {
-  return text.replace(/[a-z]/gi, char => `[${char.toLowerCase()}${char.toUpperCase()}]`);
-}

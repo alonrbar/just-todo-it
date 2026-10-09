@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { TodoItem } from './types';
-import { EXCLUDE_PATTERN, INCLUDE_PATTERN, MAX_FILE_SIZE_BYTES } from './scanFilePatterns';
+import { getExcludePattern, INCLUDE_PATTERN, MAX_FILE_SIZE_BYTES } from './scanFilePatterns';
 import { mapWithConcurrency } from './utils';
 
 /**
@@ -27,8 +27,13 @@ export class TodoScanner {
    */
   public async scanWorkspace(): Promise<TodoItem[]> {
 
-    // Find all text files, excluding common non-source directories
-    const files = await vscode.workspace.findFiles(INCLUDE_PATTERN, EXCLUDE_PATTERN);
+    // Find all text files in each workspace folder, excluding the user's excludes and the folder's .gitignore rules
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    const filesPerFolder = await Promise.all(folders.map(async folder => vscode.workspace.findFiles(
+      new vscode.RelativePattern(folder, INCLUDE_PATTERN),
+      await getExcludePattern(folder)
+    )));
+    const files = filesPerFolder.flat();
 
     // Scan files with a bounded number of concurrent reads
     const results = await mapWithConcurrency(files, SCAN_CONCURRENCY, file => this.scanFile(file));
