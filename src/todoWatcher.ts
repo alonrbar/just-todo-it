@@ -83,6 +83,7 @@ export class TodoWatcher implements vscode.Disposable {
         try {
             const results = await this.scanner.scanFiles(changedFiles);
             const todosPerFile = new Map(changedFiles.map((uri, index) => [uri.fsPath, results[index]]));
+            this.scanner.removeFiles(deletedPaths);
             this.treeProvider.updateFiles(todosPerFile, deletedPaths);
             this.onDidUpdate();
         } catch (error) {

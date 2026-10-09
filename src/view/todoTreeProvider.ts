@@ -1,7 +1,7 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { TodoItem } from '../types';
 import { fuzzyMatch, createSearchableString } from '../utils/fuzzyMatch';
+import { isSameOrUnder } from '../utils/paths';
 import { TodoTreeItem } from './todoTreeItem';
 
 /**
@@ -59,7 +59,7 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeItem> {
      */
     updateFiles(changedFiles: Map<string, TodoItem[]>, deletedPaths: string[]): void {
         function isDeleted(filePath: string): boolean {
-            return deletedPaths.some(deletedPath => filePath === deletedPath || filePath.startsWith(deletedPath + path.sep));
+            return deletedPaths.some(deletedPath => isSameOrUnder(filePath, deletedPath));
         }
 
         // Remove existing TODOs from changed and deleted files, then add the new TODOs

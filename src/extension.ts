@@ -11,7 +11,7 @@ let searchViewProvider: SearchViewProvider;
 export function activate(context: vscode.ExtensionContext) {
     console.log('Just TODO It extension is now active');
 
-    const scanner = new TodoScanner();
+    const scanner = new TodoScanner(context.workspaceState);
     const treeProvider = new TodoTreeProvider(context);
 
     // Create the search view provider
@@ -35,7 +35,9 @@ export function activate(context: vscode.ExtensionContext) {
         showCollapseAll: true
     });
 
-    // Initial scan
+    // Show the TODOs from the last session right away, then scan for changes
+    treeProvider.setTodos(scanner.getCachedTodos());
+    updateTreeViewTitle(treeProvider);
     scanWorkspace(scanner, treeProvider);
 
     // Register commands
@@ -101,7 +103,8 @@ export function activate(context: vscode.ExtensionContext) {
         clearSearchCommand,
         scopeToLabelCommand,
         openTodoCommand,
-        todoWatcher
+        todoWatcher,
+        scanner
     );
 }
 

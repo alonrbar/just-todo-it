@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { TodoItem } from '../types';
 import { mapWithConcurrency } from '../utils/async';
 import { matchesGlob } from '../utils/glob';
+import { ScanCache } from './scanCache';
 import { getExcludePattern, INCLUDE_PATTERN, MAX_FILE_SIZE_BYTES } from './scanFilePatterns';
 
 /**
@@ -21,12 +22,32 @@ const textDecoder = new TextDecoder('utf-8');
 /**
  * Scans the workspace for TODO comments matching the pattern TODO(label): text
  */
-export class TodoScanner {
+export class TodoScanner implements vscode.Disposable {
 
     /**
      * Exclude pattern per workspace folder URI, from the last workspace scan
      */
     private readonly excludePatterns = new Map<string, string>();
+
+    private readonly cache: ScanCache;
+
+    /**
+     * @param state - Workspace state for persisting scan results between sessions
+     */
+    constructor(state: vscode.Memento) {
+        this.cache = new ScanCache(state);
+    }
+
+    public dispose(): void {
+        this.cache.dispose();
+    }
+
+    /**
+     * Gets the TODOs from the scan cache, to show before the first workspace scan completes
+     */
+    public getCachedTodos(): TodoItem[] {
+        return this.cache.getAllTodos();
+    }
 
     /**
      * Scans all files in the workspace for TODO comments
@@ -42,8 +63,21 @@ export class TodoScanner {
             return vscode.workspace.findFiles(new vscode.RelativePattern(folder, INCLUDE_PATTERN), excludePattern);
         }));
 
-        const results = await this.scanFiles(filesPerFolder.flat());
+        const files = filesPerFolder.flat();
+        const results = await this.scanFiles(files);
+
+        // Forget files that are no longer part of the scan (deleted or excluded)
+        this.cache.keepOnly(new Set(files.map(file => file.fsPath)));
+
         return results.flat();
+    }
+
+    /**
+     * Forgets the scan results of deleted files
+     * @param deletedPaths - Absolute paths of deleted files or folders
+     */
+    public removeFiles(deletedPaths: string[]): void {
+        this.cache.deleteUnder(deletedPaths);
     }
 
     /**
@@ -78,17 +112,25 @@ export class TodoScanner {
     public async scanFile(uri: vscode.Uri): Promise<TodoItem[]> {
         try {
             const stat = await vscode.workspace.fs.stat(uri);
-            if (stat.size > MAX_FILE_SIZE_BYTES) {
-                return [];
+            const cachedTodos = this.cache.get(uri.fsPath, stat);
+            if (cachedTodos) {
+                return cachedTodos;
             }
 
-            // Read raw bytes instead of opening a TextDocument, which is much more
-            // expensive and notifies other extensions about every opened file
-            const bytes = await vscode.workspace.fs.readFile(uri);
-            return this.scanDocumentBody(uri, textDecoder.decode(bytes));
+            let todos: TodoItem[] = [];
+            if (stat.size <= MAX_FILE_SIZE_BYTES) {
+                // Read raw bytes instead of opening a TextDocument, which is much more
+                // expensive and notifies other extensions about every opened file
+                const bytes = await vscode.workspace.fs.readFile(uri);
+                todos = this.scanDocumentBody(uri, textDecoder.decode(bytes));
+            }
+
+            this.cache.set(uri.fsPath, stat, todos);
+            return todos;
         } catch (error) {
             // Silently skip files that can't be read (binary files, permission issues, etc.)
             console.warn(`Could not scan file ${uri.fsPath}:`, error);
+            this.cache.delete(uri.fsPath);
             return [];
         }
     }
